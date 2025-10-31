@@ -9,7 +9,7 @@ const app = express();
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   (req as RequestWithUser).user = {
-    _id: '685019091bc191cf15fd9de1'
+    _id: '685019091bc191cf15fd9de1',
   };
 
   next();

@@ -30,7 +30,7 @@ export const getUserById = async (req: Request, res: Response) => {
 
     res.status(500).send({ message: 'Ошибка сервера' });
   }
-}
+};
 
 // Создание нового пользователя
 export const createUser = async (req: Request, res: Response) => {
@@ -57,7 +57,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { name, about },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!user) {
@@ -83,7 +83,7 @@ export const updateUserAvatar = async (req: Request, res: Response) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { avatar },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!user) {

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
   name: string;
@@ -11,18 +11,18 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: true,
     minlength: 2,
-    maxlength: 30
+    maxlength: 30,
   },
   about: {
     type: String,
     required: true,
     minlength: 2,
-    maxlength: 30
+    maxlength: 30,
   },
   avatar: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 });
 
 export default mongoose.model<IUser>('user', userSchema);
