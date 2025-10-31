@@ -1,15 +1,16 @@
 import { Request, Response } from 'express';
 import User from '../models/user';
 import { RequestWithUser } from '../types/index';
+import HttpStatus from './httpStatuses';
 
 // Получение всех пользователей
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const users = await User.find({});
 
-    res.status(200).send(users);
+    res.status(HttpStatus.Ok).send(users);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(HttpStatus.InternalServerError).send({ message: 'Ошибка сервера' });
   }
 };
 
@@ -19,16 +20,16 @@ export const getUserById = async (req: Request, res: Response) => {
     const user = await User.findById(req.params.userId);
 
     if (!user) {
-      return res.status(404).send('Пользователь по указанному _id не найден');
+      return res.status(HttpStatus.NotFound).send({ message: 'Пользователь по указанному _id не найден' });
     }
 
-    res.status(200).send(user);
+    res.status(HttpStatus.Ok).send(user);
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'CastError') {
-      return res.status(400).send({ message: 'Передан некорректный _id пользователя' });
+      return res.status(HttpStatus.BadRequest).send({ message: 'Передан некорректный _id пользователя' });
     }
 
-    res.status(500).send({ message: 'Ошибка сервера' });
+    res.status(HttpStatus.InternalServerError).send({ message: 'Ошибка сервера' });
   }
 };
 
@@ -38,13 +39,13 @@ export const createUser = async (req: Request, res: Response) => {
     const { name, about, avatar } = req.body;
     const user = await User.create({ name, about, avatar });
 
-    res.status(201).send(user);
+    res.status(HttpStatus.Created).send(user);
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'ValidationError') {
-      return res.status(400).send({ message: 'Переданы некорректные данные при создании пользователя' });
+      return res.status(HttpStatus.BadRequest).send({ message: 'Переданы некорректные данные при создании пользователя' });
     }
 
-    res.status(500).send({ message: 'Ошибка сервера' });
+    res.status(HttpStatus.InternalServerError).send({ message: 'Ошибка сервера' });
   }
 };
 
@@ -61,16 +62,16 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     );
 
     if (!user) {
-      return res.status(404).send({ message: 'Пользователь по указанному _id не найден' });
+      return res.status(HttpStatus.NotFound).send({ message: 'Пользователь по указанному _id не найден' });
     }
 
-    res.status(200).send(user);
+    res.status(HttpStatus.Ok).send(user);
   } catch (err: unknown) {
     if (err instanceof Error && (err.name === 'ValidationError' || err.name === 'CastError')) {
-      return res.status(400).send({ message: 'Переданы некорректные данные при обновлении профиля' });
+      return res.status(HttpStatus.BadRequest).send({ message: 'Переданы некорректные данные при обновлении профиля' });
     }
 
-    res.status(500).send({ message: 'Ошибка сервера' });
+    res.status(HttpStatus.InternalServerError).send({ message: 'Ошибка сервера' });
   }
 };
 
@@ -87,15 +88,15 @@ export const updateUserAvatar = async (req: Request, res: Response) => {
     );
 
     if (!user) {
-      return res.status(404).send({ message: 'Пользователь по указанному _id не найден' });
+      return res.status(HttpStatus.NotFound).send({ message: 'Пользователь по указанному _id не найден' });
     }
 
-    res.status(200).send(user);
+    res.status(HttpStatus.Ok).send(user);
   } catch (err: unknown) {
     if (err instanceof Error && (err.name === 'ValidationError' || err.name === 'CastError')) {
-      return res.status(400).send({ message: 'Переданы некорректные данные при обновлении аватара' });
+      return res.status(HttpStatus.BadRequest).send({ message: 'Переданы некорректные данные при обновлении аватара' });
     }
 
-    res.status(500).send({ message: 'Ошибка сервера' });
+    res.status(HttpStatus.InternalServerError).send({ message: 'Ошибка сервера' });
   }
 };
