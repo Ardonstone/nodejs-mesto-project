@@ -1,86 +1,61 @@
-import { Request, Response } from 'express';
-import mongoose from 'mongoose';
-import { RequestWithUser } from '../types/index';
-import HttpStatus from './httpStatuses';
+import { NextFunction, Request, Response } from 'express';
+import { RequestWithUser } from '../utils/types';
+import AppError from '../errors/appError';
 import Card from '../models/card';
 
 // Получение всех карточек
-export const getCards = async (req: Request, res: Response) => {
+export const getCards = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cards = await Card.find({});
 
-    res.status(HttpStatus.Ok).json(cards); // Вместо 200
-  } catch (err: unknown) {
-    console.error('Error fetching cards:', err);
-
-    if (err instanceof mongoose.Error.CastError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректные данные для поиска карточек' });
-    }
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректные данные для поиска' });
-    }
-    if (err instanceof mongoose.Error) {
-      return res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка базы данных при получении карточек' });
-    }
-
-    res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка сервера' });
+    return res.status(200).send(cards);
+  } catch (err) {
+    return next(err);
   }
 };
 
 // Создание карточки
-export const createCard = async (req: Request, res: Response) => {
+export const createCard = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, link } = req.body;
     const card = await Card.create({ name, link, owner: (req as RequestWithUser).user._id });
 
-    res.status(HttpStatus.Created).json(card); // Вместо 201
+    return res.status(201).send(card);
   } catch (err: unknown) {
-    console.error('Error creating card:', err);
-
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Переданы некорректные данные при создании карточки' });
+    if (err instanceof Error && err.name === 'ValidationError') {
+      return next(new AppError('Переданы некорректные данные при создании карточки', 400));
     }
-    if (err instanceof mongoose.Error.CastError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректный owner ID' });
-    }
-    if (err instanceof mongoose.Error) {
-      return res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка базы данных при создании карточки' });
-    }
-
-    res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка сервера' });
+    return next(err);
   }
 };
 
 // Удаление карточки
-export const deleteCard = async (req: Request, res: Response) => {
+export const deleteCard = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId);
+    const card = await Card.findById(cardId);
 
     if (!card) {
-      return res.status(HttpStatus.NotFound).json({ message: 'Карточка с указанным _id не найдена' }); // Вместо 404
+      return next(new AppError('Карточка с указанным _id не найдена', 404));
     }
 
-    res.status(HttpStatus.Ok).json({ message: 'Карточка удалена' });
+    if (card.owner.toString() !== (req as RequestWithUser).user._id) {
+      return next(new AppError('Нет прав для удаления этой карточки', 403));
+    }
+
+    await card.remove();
+
+    return res.status(200).send({ message: 'Карточка удалена' });
   } catch (err: unknown) {
-    console.error('Error deleting card:', err);
-
-    if (err instanceof mongoose.Error.CastError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Передан некорректный _id карточки' });
+    if (err instanceof Error && err.name === 'CastError') {
+      return next(new AppError('Передан некорректный _id карточки', 400));
     }
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректные данные для удаления' });
-    }
-    if (err instanceof mongoose.Error) {
-      return res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка базы данных при удалении карточки' });
-    }
-
-    res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка сервера' });
+    return next(err);
   }
 };
 
 // Поставить лайк на карточку
-export const likeCard = async (req: Request, res: Response) => {
+export const likeCard = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
@@ -89,29 +64,20 @@ export const likeCard = async (req: Request, res: Response) => {
     );
 
     if (!card) {
-      return res.status(HttpStatus.NotFound).json({ message: 'Передан несуществующий _id карточки' });
+      return next(new AppError('Карточка с указанным _id не найдена', 404));
     }
 
-    res.status(HttpStatus.Ok).json(card);
+    return res.status(200).send(card);
   } catch (err: unknown) {
-    console.error('Error liking card:', err);
-
-    if (err instanceof mongoose.Error.CastError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Передан некорректный _id карточки для лайка' });
+    if (err instanceof Error && err.name === 'CastError') {
+      return next(new AppError('Переданы некорректные данные для постановки лайка или некорректный _id карточки', 400));
     }
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректные данные для постановки лайка' });
-    }
-    if (err instanceof mongoose.Error) {
-      return res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка базы данных при постановке лайка' });
-    }
-
-    res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка сервера' });
+    return next(err);
   }
 };
 
 // Убрать лайк с карточки
-export const unlikeCard = async (req: Request, res: Response) => {
+export const unlikeCard = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
@@ -120,23 +86,14 @@ export const unlikeCard = async (req: Request, res: Response) => {
     );
 
     if (!card) {
-      return res.status(HttpStatus.NotFound).json({ message: 'Передан несуществующий _id карточки' }); // Вместо 404
+      return next(new AppError('Передан несуществующий _id карточки', 404));
     }
 
-    res.status(HttpStatus.Ok).json(card);
+    return res.status(200).send(card);
   } catch (err: unknown) {
-    console.error('Error unliking card:', err);
-
-    if (err instanceof mongoose.Error.CastError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Передан некорректный _id карточки для снятия лайка' });
+    if (err instanceof Error && err.name === 'CastError') {
+      return next(new AppError('Переданы некорректные данные для постановки лайка или некорректный _id карточки', 400));
     }
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(HttpStatus.BadRequest).json({ message: 'Некорректные данные для снятия лайка' });
-    }
-    if (err instanceof mongoose.Error) {
-      return res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка базы данных при снятии лайка' });
-    }
-
-    res.status(HttpStatus.InternalServerError).json({ message: 'Ошибка сервера' });
+    return next(err);
   }
 };
